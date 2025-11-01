@@ -1,0 +1,36 @@
+stages:
+  cleaning:
+    cmd: python -m src.data.clean
+    deps:
+      - src/data/clean.py
+      - data/raw
+    outs:
+      - data/interim
+
+  preprocess:
+    cmd: python scripts/preprocess_n_save.py
+    deps:
+      - scripts/preprocess_n_save.py
+      - src/features/preprocessing.py
+      - data/interim
+    outs:
+      - data/processed/scaled.csv
+
+  pca:
+    cmd: python scripts/run_pca.py
+    deps:
+      - scripts/run_pca.py
+      - src/features/pca.py
+      - data/processed/scaled.csv
+    outs:
+      - data/processed/pca_components.csv
+      - models/pca_model.pkl
+
+  modeling:
+    cmd: python scripts/run_modeling.py
+    deps:
+      - scripts/run_modeling.py
+      - src/models/train.py
+      - data/processed/scaled.csv
+    outs:
+      - models
