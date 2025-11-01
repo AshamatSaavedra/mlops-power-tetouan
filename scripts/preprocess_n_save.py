@@ -3,7 +3,7 @@ import pandas as pd
 from src.features.preprocessing import preprocess
 
 # Rutas
-clean_path = Path("data/processed/clean.csv")    # salida de src.data.clean
+clean_path = Path("data/interim/power_tetouan_city_modified_clean.csv")    # salida de src.data.clean
 scaled_path = Path("data/processed/scaled.csv")
 
 if not clean_path.exists():

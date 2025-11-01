@@ -1,0 +1,79 @@
+schema: '2.0'
+stages:
+  cleaning:
+    cmd: "poetry run python -m src.data.load --i data/raw/power_tetouan_city_modified.csv
+      --s data/interim/power_tetouan_city_loaded.csv\npoetry run python -m src.data.clean
+      --input data/interim/power_tetouan_city_loaded.csv --o data/interim/power_tetouan_city_modified_clean.csv\
+      \ \n"
+    deps:
+    - path: data/raw/power_tetouan_city_modified.csv
+      hash: md5
+      md5: b86ef39f691bde959e50ca714aa1bcb5
+      size: 4510965
+      isexec: true
+    - path: src/data/clean.py
+      hash: md5
+      md5: e7847a49276165c01ac7fb7f633227a2
+      size: 6772
+      isexec: true
+    - path: src/data/load.py
+      hash: md5
+      md5: d4efa85de3e4fafbdc78e5264891f1c8
+      size: 3477
+      isexec: true
+    outs:
+    - path: data/interim/power_tetouan_city_modified_clean.csv
+      hash: md5
+      md5: 5e0b53ea9dc2b708be5d0ff906244c53
+      size: 4698125
+      isexec: true
+  preprocess:
+    cmd: "poetry run python -m scripts.preprocess_n_save --input data/interim/power_tetouan_city_modified_clean.csv\
+      \  --output data/processed/scaled.csv\n"
+    deps:
+    - path: data/interim/power_tetouan_city_modified_clean.csv
+      hash: md5
+      md5: 5e0b53ea9dc2b708be5d0ff906244c53
+      size: 4698125
+      isexec: true
+    - path: scripts/preprocess_n_save.py
+      hash: md5
+      md5: eecee6d7f17ceade497195a06f1ddcc9
+      size: 790
+      isexec: true
+    - path: src/features/preprocessing.py
+      hash: md5
+      md5: ff519a589fdc7d77ab5c8dc1a761dc5d
+      size: 2562
+      isexec: true
+    outs:
+    - path: data/processed/scaled.csv
+      hash: md5
+      md5: d91a7a66c216394ae61394f456beacc5
+      size: 10335358
+      isexec: true
+  modeling:
+    cmd: "poetry run python -m scripts.run_modeling --input data/processed/scaled.csv
+      --output_dir models\n"
+    deps:
+    - path: data/processed/scaled.csv
+      hash: md5
+      md5: d91a7a66c216394ae61394f456beacc5
+      size: 10335358
+      isexec: true
+    - path: scripts/run_modeling.py
+      hash: md5
+      md5: f04b2702c213c517006f74a93eee4d0d
+      size: 78
+      isexec: true
+    - path: src/models/modeling.py
+      hash: md5
+      md5: 50a02c9a9e5664f21c25cd4a5339b29e
+      size: 5129
+      isexec: true
+    outs:
+    - path: models
+      hash: md5
+      md5: 86f2dcaf7e74ea720f7440e21e7fb3b5.dir
+      size: 1824037771
+      nfiles: 6

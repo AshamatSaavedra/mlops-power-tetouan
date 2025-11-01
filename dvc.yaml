@@ -1,36 +1,31 @@
 stages:
   cleaning:
-    cmd: python -m src.data.clean
+    cmd: |
+      poetry run python -m src.data.load --i data/raw/power_tetouan_city_modified.csv --s data/interim/power_tetouan_city_loaded.csv
+      poetry run python -m src.data.clean --input data/interim/power_tetouan_city_loaded.csv --o data/interim/power_tetouan_city_modified_clean.csv 
     deps:
+      - src/data/load.py
       - src/data/clean.py
-      - data/raw
+      - data/raw/power_tetouan_city_modified.csv
     outs:
-      - data/interim
+      - data/interim/power_tetouan_city_modified_clean.csv
 
   preprocess:
-    cmd: python scripts/preprocess_n_save.py
+    cmd: |
+      poetry run python -m scripts.preprocess_n_save --input data/interim/power_tetouan_city_modified_clean.csv  --output data/processed/scaled.csv
     deps:
       - scripts/preprocess_n_save.py
       - src/features/preprocessing.py
-      - data/interim
+      - data/interim/power_tetouan_city_modified_clean.csv
     outs:
       - data/processed/scaled.csv
-
-  pca:
-    cmd: python scripts/run_pca.py
-    deps:
-      - scripts/run_pca.py
-      - src/features/pca.py
-      - data/processed/scaled.csv
-    outs:
-      - data/processed/pca_components.csv
-      - models/pca_model.pkl
 
   modeling:
-    cmd: python scripts/run_modeling.py
+    cmd: |
+      poetry run python -m scripts.run_modeling --input data/processed/scaled.csv --output_dir models
     deps:
       - scripts/run_modeling.py
-      - src/models/train.py
+      - src/models/modeling.py
       - data/processed/scaled.csv
     outs:
       - models

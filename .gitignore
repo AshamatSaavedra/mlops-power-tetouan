@@ -23,8 +23,10 @@ env/
 # ------------------------------------------------------------------------------
 # DATA (CONTROLLED BY DVC)
 # ------------------------------------------------------------------------------
-data/
-!data/.gitkeep
+# Ignorar datasets y carpetas procesadas
+data/raw/*.csv
+data/interim/
+data/processed/
 
 # Deja pasar sólo archivos necesarios
 # (todo lo demás lo maneja DVC con .dvc files)
@@ -57,3 +59,4 @@ mlruns/
 # ------------------------------------------------------------------------------
 .DS_Store
 Thumbs.db
+/models
