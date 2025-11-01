@@ -1,0 +1,6 @@
+outs:
+- md5: 5e0b53ea9dc2b708be5d0ff906244c53
+  size: 4698125
+  isexec: true
+  hash: md5
+  path: clean.csv
