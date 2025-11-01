@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "mlops-power-tetouan"
+version = "0.1.0"
+description = ""
+authors = ["José Ashamat Jaimes Saavedra <A01736690@tec.mx>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pandas = "^2.3.3"
+numpy = "^2.3.4"
+scikit-learn = "^1.7.2"
+matplotlib = "^3.10.7"
+seaborn = "^0.13.2"
+dvc = "^3.63.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
