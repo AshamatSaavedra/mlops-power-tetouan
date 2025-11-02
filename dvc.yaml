@@ -1,0 +1,46 @@
+stages:
+  load:
+    cmd: |
+      poetry run python -m mlops_power_tetouan.pipelines.run_load --input data/raw/power_tetouan_city_modified.csv \--output data/interim/power_tetouan_city_loaded.csv
+    deps:
+      - mlops_power_tetouan/dataset.py
+      - mlops_power_tetouan/pipelines/run_load.py
+      - data/raw/power_tetouan_city_modified.csv
+    outs:
+      - data/interim/power_tetouan_city_loaded.csv
+
+  cleaning:
+    cmd: |
+      poetry run python -m mlops_power_tetouan.pipelines.run_cleaning --input data/interim/power_tetouan_city_loaded.csv \--output data/interim/power_tetouan_city_modified_clean.csv
+    deps:
+      - mlops_power_tetouan/features/data_cleaner.py
+      - mlops_power_tetouan/pipelines/run_cleaning.py
+      - data/interim/power_tetouan_city_loaded.csv
+    outs:
+      - data/interim/power_tetouan_city_modified_clean.csv
+
+  preprocess:
+    cmd: |
+      poetry run python -m mlops_power_tetouan.pipelines.preprocess_n_save --input data/interim/power_tetouan_city_modified_clean.csv --output data/processed/scaled.csv --scaler_path models/scaler.pkl
+    deps:
+      - mlops_power_tetouan/features/feature_engineer.py
+      - mlops_power_tetouan/pipelines/preprocess_n_save.py
+      - data/interim/power_tetouan_city_modified_clean.csv
+    outs:
+      - data/processed/scaled.csv
+      - models/scaler.pkl
+
+  modeling:
+    cmd: |
+      poetry run python -m mlops_power_tetouan.pipelines.run_modeling
+    deps:
+      - mlops_power_tetouan/modeling/modeling.py
+      - mlops_power_tetouan/pipelines/run_modeling.py
+      - data/processed/scaled.csv
+    outs:
+      - models/zone1_best_model.pkl
+      - models/zone1_metrics.json
+      - models/zone2_best_model.pkl
+      - models/zone2_metrics.json
+      - models/zone3_best_model.pkl
+      - models/zone3_metrics.json
