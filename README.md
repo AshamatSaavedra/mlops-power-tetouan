@@ -128,10 +128,11 @@ poetry install
 poetry shell
 
 ✅ 3. Descargar datos (ya incluidos en /data/raw)
+
 ✅ 4. Ejecutar el pipeline completo
 dvc repro
 
-✅ 5. Ejecutar scripts manualmente
+Paso alternativo: Ejecutar scripts manualmente
 
 Preprocesamiento:
 
@@ -166,5 +167,6 @@ Pipelines sklearn
 MLflow
 
 Feature engineering avanzado
+
 
 Tracking de experimentos
