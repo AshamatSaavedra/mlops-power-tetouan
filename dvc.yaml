@@ -21,7 +21,7 @@ stages:
 
   preprocess:
     cmd: |
-      poetry run python -m mlops_power_tetouan.pipelines.preprocess_n_save --input data/interim/power_tetouan_city_modified_clean.csv --output data/processed/scaled.csv --scaler_path models/scaler.pkl
+      poetry run python -m mlops_power_tetouan.pipelines.preprocess_n_save --input data/interim/power_tetouan_city_modified_clean.csv --output data/processed/scaled.csv --pipeline_path models/feature_pipeline.pkl --scaler_path models/scaler.pkl
     deps:
       - mlops_power_tetouan/features/feature_engineer.py
       - mlops_power_tetouan/pipelines/preprocess_n_save.py
@@ -29,6 +29,7 @@ stages:
     outs:
       - data/processed/scaled.csv
       - models/scaler.pkl
+      - models/feature_pipeline.pkl
 
   modeling:
     cmd: |

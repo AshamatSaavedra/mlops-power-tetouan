@@ -14,6 +14,7 @@ matplotlib = "^3.10.7"
 seaborn = "^0.13.2"
 dvc = "^3.63.0"
 cookiecutter-data-science = "^2.3.0"
+mlflow = "^3.5.1"
 
 
 [build-system]

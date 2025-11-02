@@ -1,12 +1,25 @@
-# mlops_power_tetouan
+# MLOps Power Consumption — Tetouan  
 
-<a target="_blank" href="https://cookiecutter-data-science.drivendata.org/">
-    <img src="https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter" />
-</a>
+Pipeline completo de Machine Learning y MLOps para modelar el consumo energético en tres zonas de la ciudad de Tetouan.  
+Este proyecto implementa buenas prácticas de ingeniería, versionado de datos, experiment tracking, modularización de código y reproducibilidad usando **DVC**, **MLflow**, **Scikit-Learn** y una arquitectura basada en **Cookiecutter Data Science**.
 
-analizar, limpiar, transformar y modelar el dataset **Power Consumption of Tetouan City** utilizando las mejores prácticas de MLOps
+---
 
-## Project Organization
+## Objetivo del Proyecto
+
+Construir un pipeline reproducible de extremo a extremo para:
+
+- Preprocesamiento y generación de features
+- Entrenamiento y selección de modelos por zona
+- Registro y comparación de experimentos
+- Versionado de datasets y modelos
+- Reproducibilidad total vía DVC
+
+---
+
+## Estructura del Proyecto
+
+Basada en *Cookiecutter Data Science*:
 
 ```
 ├── LICENSE            <- Open-source license if one is chosen
@@ -58,4 +71,97 @@ analizar, limpiar, transformar y modelar el dataset **Power Consumption of Tetou
 ```
 
 --------
+---
 
+## Instalación
+
+## Clona el repo:
+
+git clone https://github.com/usuario/mlops_power_tetouan.git
+cd mlops_power_tetouan
+
+Instala dependencias (via Poetry):
+
+poetry install
+
+Activa el entorno:
+
+poetry shell
+
+## Ejecución del Pipeline (DVC)
+1. Preprocesamiento + Generación de Features
+
+Genera scaled.csv y guarda el pipeline de features:
+
+dvc repro preprocess
+
+2. Entrenamiento de Modelos
+
+Entrena los 5 modelos para cada zona y registra todos los experimentos en MLflow:
+
+dvc repro modeling
+
+3. Pipeline completo
+dvc repro
+
+## MLflow UI
+
+Para visualizar modelos, métricas y comparaciones:
+
+mlflow ui --backend-store-uri mlruns/
+
+
+Luego abre en el navegador:
+
+    http://127.0.0.1:5000
+
+Aquí podrás ver:
+
+MAE, RMSE, R² por modelo y zona
+
+parámetros utilizados
+
+artefactos (modelos .pkl)
+
+comparaciones lado a lado
+
+## Modelos Entrenados
+
+Se entrenan los siguientes modelos por zona:
+
+Linear Regression
+
+RidgeCV
+
+LassoCV
+
+RandomForestRegressor (con GridSearchCV)
+
+GradientBoostingRegressor
+
+## Resultados (Resumen)
+
+Los mejores modelos en las tres zonas fueron:
+
+Random Forest (todas las zonas)
+
+Con desempeños:
+
+Zona	MAE	RMSE	R²
+Zone 1	973.33	1742.70	0.94
+Zone 2	704.43	1419.04	0.93
+Zone 3	841.54	2114.40	0.90
+
+Los modelos lineales tuvieron mal desempeño (R² ~ 0.55–0.68), evidenciando fuerte no linealidad en el consumo energético.
+
+Conclusiones Principales
+
+El pipeline es totalmente reproducible mediante DVC.
+
+El uso de MLflow permite una gestión profesional de experimentos.
+
+Las features temporales, cíclicas e interacciones mejoraron notablemente el rendimiento.
+
+Random Forest fue el mejor modelo en todas las zonas.
+
+El proyecto quedó listo para pasar a una Fase 3 (Deploy + API + CI/CD).

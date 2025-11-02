@@ -53,7 +53,7 @@ stages:
   preprocess:
     cmd: "poetry run python -m mlops_power_tetouan.pipelines.preprocess_n_save --input
       data/interim/power_tetouan_city_modified_clean.csv --output data/processed/scaled.csv
-      --scaler_path models/scaler.pkl\n"
+      --pipeline_path models/feature_pipeline.pkl --scaler_path models/scaler.pkl\n"
     deps:
     - path: data/interim/power_tetouan_city_modified_clean.csv
       hash: md5
@@ -62,37 +62,42 @@ stages:
       isexec: true
     - path: mlops_power_tetouan/features/feature_engineer.py
       hash: md5
-      md5: 2791e664efae666dd147c6c37f0ccab7
-      size: 3819
+      md5: e144c5ea609093326b96c878d3eb5a83
+      size: 5990
       isexec: true
     - path: mlops_power_tetouan/pipelines/preprocess_n_save.py
       hash: md5
-      md5: 6d40b554dfb2492e06dd39d32bad476b
-      size: 1191
+      md5: 09ec26c1060b1f21aab1153f7269f85f
+      size: 2041
       isexec: true
     outs:
     - path: data/processed/scaled.csv
       hash: md5
-      md5: d91a7a66c216394ae61394f456beacc5
-      size: 10335358
+      md5: 0c9b9e0bc98cc00ab4e9fdc6f6092629
+      size: 15409075
+      isexec: true
+    - path: models/feature_pipeline.pkl
+      hash: md5
+      md5: eda26614b4fed8dc71d3c097d480297e
+      size: 3781
       isexec: true
     - path: models/scaler.pkl
       hash: md5
-      md5: 646ce35114ccf332f3706a59a5d07c2d
-      size: 1071
+      md5: 947c750156416e101e27d2e52d43ab5d
+      size: 727
       isexec: true
   modeling:
     cmd: "poetry run python -m mlops_power_tetouan.pipelines.run_modeling\n"
     deps:
     - path: data/processed/scaled.csv
       hash: md5
-      md5: d91a7a66c216394ae61394f456beacc5
-      size: 10335358
+      md5: 0c9b9e0bc98cc00ab4e9fdc6f6092629
+      size: 15409075
       isexec: true
     - path: mlops_power_tetouan/modeling/modeling.py
       hash: md5
-      md5: 2832f209212834b7b525afc6074213cc
-      size: 6410
+      md5: 9265795d60e0253ec794caa9966d307b
+      size: 6516
       isexec: true
     - path: mlops_power_tetouan/pipelines/run_modeling.py
       hash: md5
@@ -102,31 +107,31 @@ stages:
     outs:
     - path: models/zone1_best_model.pkl
       hash: md5
-      md5: 822ccaf4142c46fd824804339ff8eb7e
-      size: 755002943
+      md5: 0356043c65098b38149efb32145d5eb7
+      size: 230432879
       isexec: true
     - path: models/zone1_metrics.json
       hash: md5
-      md5: 1e99f6012ddab8c78a56560290faa6ac
-      size: 126
+      md5: acad4aa90546d57ee3603aaa32517ca7
+      size: 124
       isexec: true
     - path: models/zone2_best_model.pkl
       hash: md5
-      md5: 32a50c9b79b037e4f2fca7144a831fff
-      size: 755829359
+      md5: 7e8c5e3aa10190a119a726dce0451a03
+      size: 565499135
       isexec: true
     - path: models/zone2_metrics.json
       hash: md5
-      md5: 95c47a7961465f0ca7279a89c7a41954
-      size: 126
+      md5: 7f1485d1c16f33f8cec37f8a06a3fbf2
+      size: 123
       isexec: true
     - path: models/zone3_best_model.pkl
       hash: md5
-      md5: 0eb9ea073fd5758df1bbf1e30e5c7f53
-      size: 313216847
+      md5: e1d263bb4fa6c01bc5cb968ba036eb4b
+      size: 230037167
       isexec: true
     - path: models/zone3_metrics.json
       hash: md5
-      md5: ceed4e2c9198e5804ddc645a80cb4c99
-      size: 124
+      md5: 2bc331558c7890effcb842704c8722ba
+      size: 123
       isexec: true

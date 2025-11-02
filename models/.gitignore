@@ -5,3 +5,4 @@
 /zone2_metrics.json
 /zone3_best_model.pkl
 /zone3_metrics.json
+/feature_pipeline.pkl

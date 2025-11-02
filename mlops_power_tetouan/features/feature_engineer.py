@@ -1,94 +1,165 @@
+# mlops_power_tetouan/features/feature_engineering.py
+
 import os
-import joblib
-import pandas as pd
 from typing import List, Optional
+
+import joblib
+import numpy as np
+import pandas as pd
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import RobustScaler
-import logging
-
-logger = logging.getLogger(__name__)
 
 
-class FeatureEngineer:
+# -------------------------------------------------------------------
+# 1) FeatureGenerator (sin lags, sin rolling)
+# -------------------------------------------------------------------
+class FeatureGenerator(BaseEstimator, TransformerMixin):
     """
-    Encapsula la lógica de ingeniería de características:
-    - Detección de columnas numéricas
-    - Entrenamiento del scaler
-    - Carga del scaler
-    - Aplicación del escalado
-    - Pipeline completo de preprocesamiento
+    Crea variables temporales + interacciones.
     """
 
-    def __init__(self, scaler_path: str = "models/scaler.pkl"):
+    def __init__(self, datetime_col: str = "DateTime"):
+        self.datetime_col = datetime_col
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        df = X.copy()
+
+        # Aseguramos DateTime
+        if self.datetime_col in df.columns:
+            df[self.datetime_col] = pd.to_datetime(df[self.datetime_col], errors="coerce")
+
+            df = df.sort_values(self.datetime_col).reset_index(drop=True)
+
+            # --- time features ---
+            df["hour"] = df[self.datetime_col].dt.hour
+            df["day_of_week"] = df[self.datetime_col].dt.dayofweek
+            df["month"] = df[self.datetime_col].dt.month
+            df["day_of_year"] = df[self.datetime_col].dt.dayofyear
+            df["is_weekend"] = df["day_of_week"].isin([5, 6]).astype(int)
+
+            # Representación cíclica
+            df["hour_sin"] = np.sin(2 * np.pi * df["hour"] / 24)
+            df["hour_cos"] = np.cos(2 * np.pi * df["hour"] / 24)
+
+        # --- interaction features ---
+        if {"Temperature", "Humidity"}.issubset(df.columns):
+            df["temp_x_hum"] = df["Temperature"] * df["Humidity"]
+
+        if {"general diffuse flows", "diffuse flows"}.issubset(df.columns):
+            df["radiation_total"] = \
+                df["general diffuse flows"].fillna(0) + df["diffuse flows"].fillna(0)
+
+        return df
+
+
+# -------------------------------------------------------------------
+# 2) FeaturePipeline (pipeline sklearn con ColumnTransformer)
+# -------------------------------------------------------------------
+class FeaturePipeline:
+    """
+    Construye un pipeline sklearn:
+      FeatureGenerator -> Imputación -> Escalado
+    Guarda también scaler y pipeline completo.
+    """
+
+    def __init__(
+        self,
+        pipeline_path: str = "models/feature_pipeline.pkl",
+        scaler_path: str = "models/scaler.pkl"
+    ):
+        self.pipeline_path = pipeline_path
         self.scaler_path = scaler_path
-        self.scaler: Optional[RobustScaler] = None
+        self.pipeline: Optional[Pipeline] = None
 
-    # -------------------------------------------------------------------------
-    # 1) DETECCIÓN DE COLUMNAS
-    # -------------------------------------------------------------------------
-    @staticmethod
-    def get_numeric_columns(df: pd.DataFrame) -> List[str]:
-        """Retorna las columnas numéricas válidas para escalado."""
-        numeric_cols = [
-            col for col in df.columns
-            if pd.api.types.is_numeric_dtype(df[col]) and col != "DateTime"
+    def _get_numeric_features(self, df: pd.DataFrame, exclude: List[str]):
+        return [
+            c for c in df.columns
+            if pd.api.types.is_numeric_dtype(df[c]) and c not in exclude
         ]
-        logger.info(f"[FeatureEngineer] Columnas numéricas detectadas: {numeric_cols}")
-        return numeric_cols
 
-    # -------------------------------------------------------------------------
-    # 2) ENTRENAR EL SCALER
-    # -------------------------------------------------------------------------
-    def fit_scaler(self, df: pd.DataFrame, cols: List[str]) -> RobustScaler:
-        """Entrena un RobustScaler con las columnas indicadas y lo guarda en disco."""
-        scaler = RobustScaler()
-        scaler.fit(df[cols])
+    def build_pipeline(self, df: pd.DataFrame, target_cols: List[str]):
+        feature_gen = FeatureGenerator()
 
-        os.makedirs(os.path.dirname(self.scaler_path), exist_ok=True)
-        joblib.dump(scaler, self.scaler_path)
+        # Previo: transform para conocer columnas generadas
+        df_tmp = feature_gen.transform(df)
 
-        logger.info(f"[FeatureEngineer] Scaler entrenado y guardado en {self.scaler_path}")
-        self.scaler = scaler
-        return scaler
+        exclude = ["DateTime"] + target_cols
+        numeric_cols = self._get_numeric_features(df_tmp, exclude)
 
-    # -------------------------------------------------------------------------
-    # 3) CARGAR SCALER
-    # -------------------------------------------------------------------------
-    def load_scaler(self) -> RobustScaler:
-        """Carga el scaler desde disco."""
-        if not os.path.exists(self.scaler_path):
-            raise FileNotFoundError(f"[FeatureEngineer] No se encontró scaler en {self.scaler_path}")
+        passthrough_cols = ["DateTime", "day_of_week", "month",
+                            "day_of_year", "is_weekend"]
+        passthrough_cols = [c for c in passthrough_cols if c in df_tmp.columns]
 
-        self.scaler = joblib.load(self.scaler_path)
-        logger.info(f"[FeatureEngineer] Scaler cargado desde {self.scaler_path}")
-        return self.scaler
+        num_pipeline = Pipeline(steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", RobustScaler())
+        ])
 
-    # -------------------------------------------------------------------------
-    # 4) APLICAR SCALER
-    # -------------------------------------------------------------------------
-    def apply_scaler(self, df: pd.DataFrame, cols: List[str]) -> pd.DataFrame:
-        """Aplica un scaler previamente entrenado."""
-        if self.scaler is None:
-            raise ValueError("[FeatureEngineer] No hay scaler cargado ni entrenado.")
+        preproc = ColumnTransformer(
+            transformers=[
+                ("num", num_pipeline, numeric_cols),
+                ("pass", "passthrough", passthrough_cols),
+            ],
+            remainder="drop"
+        )
 
-        df_scaled = df.copy()
-        df_scaled[cols] = self.scaler.transform(df[cols])
-        return df_scaled
+        self.pipeline = Pipeline(steps=[
+            ("feature_gen", feature_gen),
+            ("preprocess", preproc)
+        ])
 
-    # -------------------------------------------------------------------------
-    # 5) PIPELINE COMPLETO
-    # -------------------------------------------------------------------------
-    def preprocess(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Pipeline principal para preprocesamiento:
-        - Detecta columnas numéricas
-        - Entrena scaler
-        - Aplica escalado
-        """
-        logger.info("[FeatureEngineer] Iniciando preprocesamiento...")
+        return self.pipeline
 
-        cols = self.get_numeric_columns(df)
-        self.fit_scaler(df, cols)
-        df_scaled = self.apply_scaler(df, cols)
+    def fit_transform(self, df: pd.DataFrame, target_cols: List[str]):
+        pipeline = self.build_pipeline(df, target_cols)
+        X = pipeline.fit_transform(df)
 
-        logger.info("[FeatureEngineer] Preprocesamiento finalizado.")
-        return df_scaled
+        os.makedirs(os.path.dirname(self.pipeline_path), exist_ok=True)
+        joblib.dump(pipeline, self.pipeline_path)
+
+        # Guardar scaler
+        try:
+            scaler = pipeline.named_steps["preprocess"].named_transformers_["num"].named_steps["scaler"]
+            joblib.dump(scaler, self.scaler_path)
+        except Exception:
+            pass
+
+        # nombres de columnas exactos
+        final_cols = pipeline.named_steps["preprocess"].get_feature_names_out()
+
+        # Quitar prefijos 'num__' y 'pass__'
+        final_cols = [c.replace("num__", "").replace("pass__", "") for c in final_cols]
+
+        df_out = pd.DataFrame(X, columns=final_cols)
+
+        # agregar targets
+        df_out = pd.concat([df_out.reset_index(drop=True), df[target_cols].reset_index(drop=True)], axis=1)
+
+        return df_out
+
+    def transform(self, df: pd.DataFrame):
+        if self.pipeline is None:
+            if os.path.exists(self.pipeline_path):
+                self.pipeline = joblib.load(self.pipeline_path)
+            else:
+                raise ValueError("Pipeline no entrenado.")
+
+        X = self.pipeline.transform(df)
+
+        feature_gen = self.pipeline.named_steps["feature_gen"]
+        df_tmp = feature_gen.transform(df)
+
+        numeric_cols = self._get_numeric_features(df_tmp, exclude=["DateTime"])
+        passthrough_cols = ["DateTime", "day_of_week", "month",
+                            "day_of_year", "is_weekend"]
+        passthrough_cols = [c for c in passthrough_cols if c in df_tmp.columns]
+
+        final_cols = numeric_cols + passthrough_cols
+
+        return pd.DataFrame(X, columns=final_cols)
