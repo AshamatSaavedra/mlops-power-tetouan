@@ -16,6 +16,8 @@ scikit-learn = "^1.7.2"
 matplotlib = "^3.10.7"
 seaborn = "^0.13.2"
 dvc = "^3.63.0"
+cookiecutter = "^2.6.0"
+cookiecutter-data-science = "^2.3.0"
 
 
 [build-system]

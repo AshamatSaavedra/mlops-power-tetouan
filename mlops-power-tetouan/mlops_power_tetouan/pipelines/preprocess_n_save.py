@@ -1,6 +1,6 @@
 from pathlib import Path
 import pandas as pd
-from src.features.preprocessing import preprocess
+from mlops_power_tetouan.features import preprocess
 
 # Rutas
 clean_path = Path("data/interim/power_tetouan_city_modified_clean.csv")    # salida de src.data.clean

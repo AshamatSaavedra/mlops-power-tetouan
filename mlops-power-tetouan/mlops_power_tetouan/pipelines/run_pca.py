@@ -1,5 +1,5 @@
 from pathlib import Path
-from src.features import pca as pca_module
+from mlops_power_tetouan.features import pca as pca_module
 import sys
 
 def main():

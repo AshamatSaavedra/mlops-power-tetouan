@@ -1,8 +1,9 @@
 from __future__ import annotations
 import pandas as pd
-import os
-from typing import Optional, List
+import numpy as np
+from typing import List, Optional
 import argparse
+import os
 import sys
 
 # Encodings a probar si la lectura con utf-8 falla
@@ -91,3 +92,4 @@ def main(argv: Optional[List[str]] = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
