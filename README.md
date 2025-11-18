@@ -1,7 +1,9 @@
-# MLOps Power Consumption — Tetouan  
+# MLOps Power Consumption — Tetouan
 
 Pipeline completo de Machine Learning y MLOps para modelar el consumo energético en tres zonas de la ciudad de Tetouan.  
-Este proyecto implementa buenas prácticas de ingeniería, versionado de datos, experiment tracking, modularización de código y reproducibilidad usando **DVC**, **MLflow**, **Scikit-Learn** y una arquitectura basada en **Cookiecutter Data Science**.
+Este proyecto implementa buenas prácticas de ingeniería, versionado de datos, experiment tracking, modularización de código y reproducibilidad usando **DVC**, **MLflow**, **Scikit-Learn**, **FastAPI**, **Docker**, y una arquitectura basada en **Cookiecutter Data Science**.
+
+**Repositorio**: https://github.com/AshamatSaavedra/mlops-power-tetouan
 
 ---
 
@@ -9,14 +11,51 @@ Este proyecto implementa buenas prácticas de ingeniería, versionado de datos, 
 
 Construir un pipeline reproducible de extremo a extremo para:
 
-- Preprocesamiento y generación de features
-- Entrenamiento y selección de modelos por zona
-- Registro y comparación de experimentos
-- Versionado de datasets y modelos
-- Reproducibilidad total vía DVC
+- Preprocesamiento y generación de features  
+- Entrenamiento y selección de modelos por zona  
+- Registro y comparación de experimentos mediante MLflow  
+- Versionado de datasets y modelos con DVC  
+- Despliegue mediante FastAPI + Docker  
+- Evaluación de *data drift* sin reentrenamiento  
 
 ---
 
+## Arquitectura General del Proyecto
+
+### 📦 Vista General del Pipeline
+ ┌──────────────────┐
+        │    Datos Raw      │
+        └─────────┬────────┘
+                  │
+                  ▼
+        ┌──────────────────┐
+        │ Preprocesamiento │  dvc stage: preprocess
+        └─────────┬────────┘
+                  │
+                  ▼
+        ┌──────────────────┐
+        │ Feature Engineering │  dvc stage: features
+        └─────────┬────────┘
+                  │
+                  ▼
+        ┌──────────────────┐
+        │  Modelado por Zona │  dvc stage: modeling
+        └─────────┬────────┘
+                  │
+                  ▼
+        ┌──────────────────┐
+        │   Métricas + MLflow │
+        └─────────┬────────┘
+                  │
+                  ▼
+        ┌──────────────────┐
+        │   Predicción API  │  FastAPI + Docker
+        └─────────┬────────┘
+                  │
+                  ▼
+        ┌──────────────────┐
+        │ Evaluación Drift │
+        └──────────────────┘
 ## Estructura del Proyecto
 
 Basada en *Cookiecutter Data Science*:
@@ -73,95 +112,123 @@ Basada en *Cookiecutter Data Science*:
 --------
 ---
 
-## Instalación
+# Instalación
 
-## Clona el repo:
+## 1. Clona el repo
 
-git clone https://github.com/usuario/mlops_power_tetouan.git
-cd mlops_power_tetouan
+git clone https://github.com/AshamatSaavedra/mlops-power-tetouan.git
+cd mlops-power-tetouan
 
-Instala dependencias (via Poetry):
+## 2. Instala dependencias (via Poetry)
 
+Copy code
 poetry install
 
-Activa el entorno:
+## 3. Activa el entorno
 
+Copy code
 poetry shell
+# Ejecución del Pipeline (DVC)
 
-## Ejecución del Pipeline (DVC)
-1. Preprocesamiento + Generación de Features
-
-Genera scaled.csv y guarda el pipeline de features:
-
+1. Preprocesamiento + Features
 dvc repro preprocess
-
-2. Entrenamiento de Modelos
-
-Entrena los 5 modelos para cada zona y registra todos los experimentos en MLflow:
-
+dvc repro features
+2. Entrenamiento de los Modelos
 dvc repro modeling
-
 3. Pipeline completo
+
 dvc repro
 
-## MLflow UI
-
-Para visualizar modelos, métricas y comparaciones:
-
+# MLflow UI
 mlflow ui --backend-store-uri mlruns/
+Abrir:
+http://127.0.0.1:5000
 
-
-Luego abre en el navegador:
-
-    http://127.0.0.1:5000
-
-Aquí podrás ver:
-
+Incluye:
 MAE, RMSE, R² por modelo y zona
-
 parámetros utilizados
-
 artefactos (modelos .pkl)
-
 comparaciones lado a lado
-
-## Modelos Entrenados
-
-Se entrenan los siguientes modelos por zona:
-
+Modelos Entrenados
+Por zona se entrenaron:
 Linear Regression
-
 RidgeCV
-
 LassoCV
-
 RandomForestRegressor (con GridSearchCV)
-
 GradientBoostingRegressor
 
-## Resultados (Resumen)
-
+Resultados (Resumen)
 Los mejores modelos en las tres zonas fueron:
 
-Random Forest (todas las zonas)
+✔ Random Forest (en todas las zonas)
 
-Con desempeños:
-
+Desempeño Final
 Zona	MAE	RMSE	R²
 Zone 1	973.33	1742.70	0.94
 Zone 2	704.43	1419.04	0.93
 Zone 3	841.54	2114.40	0.90
 
-Los modelos lineales tuvieron mal desempeño (R² ~ 0.55–0.68), evidenciando fuerte no linealidad en el consumo energético.
+Los modelos lineales mostraron bajo desempeño (R² ~ 0.55–0.68), confirmando fuertemente la no linealidad del consumo energético.
 
-Conclusiones Principales
+# Fase de Data Drift
+Se agregó un pipeline para evaluar el drift sin reentrenamiento, comparando:
 
+MAE base vs MAE con drift
+RMSE base vs RMSE con drift
+R² base vs R² con drift
+
+Cambios porcentuales
+Ejemplo de resultados:
+
+zone1:
+  MAE_change_pct: 1.42%
+  RMSE_change_pct: -0.05%
+
+zone2:
+  MAE_change_pct: 3.15%
+  RMSE_change_pct: -0.06%
+
+zone3:
+  MAE_change_pct: 7.37%
+  RMSE_change_pct: -0.08%
+Esto permite detectar degradación temprana sin necesidad de reentrenar inmediatamente.
+
+# API de Inferencia (FastAPI)
+Ejecutar:
+uvicorn mlops_power_tetouan.api.main:app --reload
+
+Endpoint principal:
+POST /predict
+Ejemplo de request:
+
+{
+    "zone": "zone1",
+    "data": {
+        "DateTime": "2018-01-01 00:10:00",
+        "Temperature": 6.4,
+        "Humidity": 74.5,
+        "Wind Speed": 0.083,
+        "general diffuse flows": 0.07,
+        "diffuse flows": 0.085,
+        "mixed_type_col": 811
+    }
+}
+
+Despliegue con Docker
+Construir imagen:
+
+docker build -t tetouan-api .
+Ejecutar contenedor:
+
+docker run -p 8000:8000 tetouan-api
+
+# Conclusiones Principales
 El pipeline es totalmente reproducible mediante DVC.
 
-El uso de MLflow permite una gestión profesional de experimentos.
+MLflow permite una gestión profesional de experimentos.
 
-Las features temporales, cíclicas e interacciones mejoraron notablemente el rendimiento.
+Las features temporales, cíclicas e interacciones mejoraron significativamente el rendimiento.
 
 Random Forest fue el mejor modelo en todas las zonas.
 
-El proyecto quedó listo para pasar a una Fase 3 (Deploy + API + CI/CD).
+Se agrega una fase robusta de detección de drift.

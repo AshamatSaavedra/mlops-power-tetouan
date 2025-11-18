@@ -50,30 +50,19 @@ def predict(req: PredictRequest):
             detail="zone must be one of zone1/zone2/zone3"
         )
 
-    # Convert to DataFrame
-    row = req.data
+    row = req.data.copy()
+
+    # --- Fuerza DateTime a string siempre ---
+    if "DateTime" in row:
+        row["DateTime"] = str(row["DateTime"])
+
     df = pd.DataFrame([row])
 
-    # -------- FIX 1: Convert input DateTime to datetime dtype --------
-    try:
-        df["DateTime"] = pd.to_datetime(df["DateTime"])
-    except Exception:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid DateTime format. Use YYYY-MM-DD HH:MM"
-        )
+    # --- DEBUG CRÍTICO ---
+    print("DF QUE LLEGA AL PIPELINE:")
+    print(df.dtypes)
+    print(df)
 
-    # -------- FIX 2: DO NOT manually generate features -----------
-    # The FeatureGenerator inside your pipeline already generates:
-    # - hour
-    # - hour_sin, hour_cos
-    # - day_of_week
-    # - month
-    # - day_of_year
-    # - is_weekend
-    # etc.
-
-    # -------- FIX 3: Pass directly through your trained pipeline --------
     try:
         if _feature_pipeline is not None:
             X = _feature_pipeline.transform(df)
@@ -87,6 +76,7 @@ def predict(req: PredictRequest):
 
     # -------- Model inference --------
     model = load_model_for_zone(zone)
+    print("FEATURES DEL MODELO ENTRENADO:", model.feature_names_in_)
     try:
         y_pred = model.predict(X)
     except Exception as e:

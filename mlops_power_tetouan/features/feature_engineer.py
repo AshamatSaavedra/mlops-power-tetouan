@@ -13,12 +13,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import RobustScaler
 
 
-# -------------------------------------------------------------------
-# 1) FeatureGenerator (sin lags, sin rolling)
-# -------------------------------------------------------------------
 class FeatureGenerator(BaseEstimator, TransformerMixin):
     """
-    Crea variables temporales + interacciones.
+    Genera variables temporales + interacciones.
     """
 
     def __init__(self, datetime_col: str = "DateTime"):
@@ -36,36 +33,37 @@ class FeatureGenerator(BaseEstimator, TransformerMixin):
 
             df = df.sort_values(self.datetime_col).reset_index(drop=True)
 
-            # --- time features ---
+            # Time-based features
             df["hour"] = df[self.datetime_col].dt.hour
             df["day_of_week"] = df[self.datetime_col].dt.dayofweek
             df["month"] = df[self.datetime_col].dt.month
             df["day_of_year"] = df[self.datetime_col].dt.dayofyear
             df["is_weekend"] = df["day_of_week"].isin([5, 6]).astype(int)
 
-            # Representación cíclica
+            # Cyclic encoding
             df["hour_sin"] = np.sin(2 * np.pi * df["hour"] / 24)
             df["hour_cos"] = np.cos(2 * np.pi * df["hour"] / 24)
 
-        # --- interaction features ---
+        # Interaction features
         if {"Temperature", "Humidity"}.issubset(df.columns):
             df["temp_x_hum"] = df["Temperature"] * df["Humidity"]
 
         if {"general diffuse flows", "diffuse flows"}.issubset(df.columns):
-            df["radiation_total"] = \
-                df["general diffuse flows"].fillna(0) + df["diffuse flows"].fillna(0)
+            df["radiation_total"] = (
+                df["general diffuse flows"].fillna(0)
+                + df["diffuse flows"].fillna(0)
+            )
 
         return df
 
 
 # -------------------------------------------------------------------
-# 2) FeaturePipeline (pipeline sklearn con ColumnTransformer)
+# FeaturePipeline — versión corregida (sin columnas duplicadas)
 # -------------------------------------------------------------------
 class FeaturePipeline:
     """
-    Construye un pipeline sklearn:
+    Pipeline:
       FeatureGenerator -> Imputación -> Escalado
-    Guarda también scaler y pipeline completo.
     """
 
     def __init__(
@@ -77,24 +75,24 @@ class FeaturePipeline:
         self.scaler_path = scaler_path
         self.pipeline: Optional[Pipeline] = None
 
-    def _get_numeric_features(self, df: pd.DataFrame, exclude: List[str]):
-        return [
-            c for c in df.columns
-            if pd.api.types.is_numeric_dtype(df[c]) and c not in exclude
-        ]
-
     def build_pipeline(self, df: pd.DataFrame, target_cols: List[str]):
+
         feature_gen = FeatureGenerator()
 
-        # Previo: transform para conocer columnas generadas
+        # Pre-generamos features para saber columnas disponibles
         df_tmp = feature_gen.transform(df)
 
-        exclude = ["DateTime"] + target_cols
-        numeric_cols = self._get_numeric_features(df_tmp, exclude)
+        # ---- DEFINICIÓN FIJA DE FEATURES (14 EXACTAS) ----
+        numeric_cols = [
+            "Temperature", "Humidity", "Wind Speed",
+            "general diffuse flows", "diffuse flows",
+            "hour", "hour_sin", "hour_cos",
+            "temp_x_hum", "radiation_total"
+        ]
 
-        passthrough_cols = ["DateTime", "day_of_week", "month",
-                            "day_of_year", "is_weekend"]
-        passthrough_cols = [c for c in passthrough_cols if c in df_tmp.columns]
+        passthrough_cols = [
+            "day_of_week", "day_of_year", "is_weekend", "month"
+        ]
 
         num_pipeline = Pipeline(steps=[
             ("imputer", SimpleImputer(strategy="median")),
@@ -109,9 +107,10 @@ class FeaturePipeline:
             remainder="drop"
         )
 
+        # Construcción del pipeline final
         self.pipeline = Pipeline(steps=[
-            ("feature_gen", feature_gen),
-            ("preprocess", preproc)
+            ("feature_gen", feature_gen),   # añade columnas necesarias
+            ("preprocess", preproc),        # solo usa nuestras listas fijas
         ])
 
         return self.pipeline
@@ -124,22 +123,20 @@ class FeaturePipeline:
         joblib.dump(pipeline, self.pipeline_path)
 
         # Guardar scaler
-        try:
-            scaler = pipeline.named_steps["preprocess"].named_transformers_["num"].named_steps["scaler"]
-            joblib.dump(scaler, self.scaler_path)
-        except Exception:
-            pass
+        scaler = pipeline.named_steps["preprocess"].named_transformers_["num"].named_steps["scaler"]
+        joblib.dump(scaler, self.scaler_path)
 
-        # nombres de columnas exactos
+        # Recuperar nombres reales del CT
         final_cols = pipeline.named_steps["preprocess"].get_feature_names_out()
-
-        # Quitar prefijos 'num__' y 'pass__'
         final_cols = [c.replace("num__", "").replace("pass__", "") for c in final_cols]
 
         df_out = pd.DataFrame(X, columns=final_cols)
 
-        # agregar targets
-        df_out = pd.concat([df_out.reset_index(drop=True), df[target_cols].reset_index(drop=True)], axis=1)
+        # Agregar targets
+        df_out = pd.concat(
+            [df_out.reset_index(drop=True), df[target_cols].reset_index(drop=True)],
+            axis=1
+        )
 
         return df_out
 
@@ -152,14 +149,7 @@ class FeaturePipeline:
 
         X = self.pipeline.transform(df)
 
-        feature_gen = self.pipeline.named_steps["feature_gen"]
-        df_tmp = feature_gen.transform(df)
-
-        numeric_cols = self._get_numeric_features(df_tmp, exclude=["DateTime"])
-        passthrough_cols = ["DateTime", "day_of_week", "month",
-                            "day_of_year", "is_weekend"]
-        passthrough_cols = [c for c in passthrough_cols if c in df_tmp.columns]
-
-        final_cols = numeric_cols + passthrough_cols
+        final_cols = self.pipeline.named_steps["preprocess"].get_feature_names_out()
+        final_cols = [c.replace("num__", "").replace("pass__", "") for c in final_cols]
 
         return pd.DataFrame(X, columns=final_cols)
