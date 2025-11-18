@@ -15,6 +15,9 @@ seaborn = "^0.13.2"
 dvc = "^3.63.0"
 cookiecutter-data-science = "^2.3.0"
 mlflow = "^3.5.1"
+pytest = "^9.0.1"
+fastapi = "^0.121.2"
+uvicorn = "^0.38.0"
 
 
 [build-system]
